@@ -66,16 +66,20 @@ static void menu_action_sdfile(const char* filename, char* longFilename, uint8_t
 static void menu_action_sddirectory(const char* filename, char* longFilename, uint8_t item);
 static void menu_action_setting_edit_bool(const char* pstr, bool* ptr);
 static void menu_action_setting_edit_int3(const char* pstr, int* ptr, int minValue, int maxValue);
+static void menu_action_setting_edit_uint8_t(const char* pstr, uint8_t* ptr, uint8_t minValue, uint8_t maxValue);
 static void menu_action_setting_edit_float3(const char* pstr, float* ptr, float minValue, float maxValue);
 static void menu_action_setting_edit_float32(const char* pstr, float* ptr, float minValue, float maxValue);
+static void menu_action_setting_edit_float43(const char* pstr, float* ptr, float minValue, float maxValue);
 static void menu_action_setting_edit_float5(const char* pstr, float* ptr, float minValue, float maxValue);
 static void menu_action_setting_edit_float51(const char* pstr, float* ptr, float minValue, float maxValue);
 static void menu_action_setting_edit_float52(const char* pstr, float* ptr, float minValue, float maxValue);
 static void menu_action_setting_edit_long5(const char* pstr, unsigned long* ptr, unsigned long minValue, unsigned long maxValue);
 static void menu_action_setting_edit_callback_bool(const char* pstr, bool* ptr, menuFunc_t callbackFunc);
 static void menu_action_setting_edit_callback_int3(const char* pstr, int* ptr, int minValue, int maxValue, menuFunc_t callbackFunc);
+static void menu_action_setting_edit_callback_uint8_t(const char* pstr, uint8_t* ptr, uint8_t minValue, uint8_t maxValue, menuFunc_t callbackFunc);
 static void menu_action_setting_edit_callback_float3(const char* pstr, float* ptr, float minValue, float maxValue, menuFunc_t callbackFunc);
 static void menu_action_setting_edit_callback_float32(const char* pstr, float* ptr, float minValue, float maxValue, menuFunc_t callbackFunc);
+static void menu_action_setting_edit_callback_float43(const char* pstr, float* ptr, float minValue, float maxValue, menuFunc_t callbackFunc);
 static void menu_action_setting_edit_callback_float5(const char* pstr, float* ptr, float minValue, float maxValue, menuFunc_t callbackFunc);
 static void menu_action_setting_edit_callback_float51(const char* pstr, float* ptr, float minValue, float maxValue, menuFunc_t callbackFunc);
 static void menu_action_setting_edit_callback_float52(const char* pstr, float* ptr, float minValue, float maxValue, menuFunc_t callbackFunc);
@@ -132,7 +136,7 @@ static void menu_action_setting_edit_callback_long5(const char* pstr, unsigned l
 #define END_MENU() \
     if (encoderPosition / ENCODER_STEPS_PER_MENU_ITEM >= _menuItemNr) encoderPosition = _menuItemNr * ENCODER_STEPS_PER_MENU_ITEM - 1; \
     if ((uint8_t)(encoderPosition / ENCODER_STEPS_PER_MENU_ITEM) >= currentMenuViewOffset + LCD_HEIGHT) { currentMenuViewOffset = (encoderPosition / ENCODER_STEPS_PER_MENU_ITEM) - LCD_HEIGHT + 1; lcdDrawUpdate = 1; _lineNr = currentMenuViewOffset - 1; _drawLineNr = -1; } \
-    } } while(0)
+} } while(0)
 
 /** Used variables to keep track of the menu */
 volatile uint8_t buttons;//Contains the bits of the currently pressed buttons.
@@ -168,6 +172,18 @@ menuFunc_t callbackFunc;
 // placeholders for Ki and Kd edits
 float raw_Ki, raw_Kd;
 
+static void lcd_goto_menu(menuFunc_t menu, const uint32_t encoder=0, const bool feedback=true) {
+  if (currentMenu != menu) {
+    currentMenu = menu;
+    encoderPosition = encoder;
+    if (feedback) lcd_quick_feedback();
+
+    // For LCD_PROGRESS_BAR re-initialize the custom characters
+    #if defined(LCD_PROGRESS_BAR) && defined(SDSUPPORT)
+      lcd_set_custom_characters(menu == lcd_status_screen);
+    #endif
+  }
+}
 /* Main status screen. It's up to the implementation specific part to show what is needed. As this is very display dependend */
 static void lcd_status_screen()
 {
@@ -188,11 +204,19 @@ static void lcd_status_screen()
 		lcd_status_update_millis = millis() + LCD_STATUS_UPDATE_INTERVAL;
     }
 
+
     if (LCD_CLICKED)
     {
-        currentMenu = lcd_main_menu;
-        encoderPosition = 0;
-        lcd_quick_feedback();
+        lcd_goto_menu(lcd_main_menu);
+        lcd_implementation_init( // to maybe revive the LCD if static electricity killed it.
+          #if defined(LCD_PROGRESS_BAR) && defined(SDSUPPORT)
+            currentMenu == lcd_status_screen
+          #endif
+        );
+        #ifdef FILAMENT_LCD_DISPLAY
+          message_millis = millis();  // get status message to show up for a while
+        #endif
+
     }
 
     // Dead zone at 100% feedrate
@@ -234,30 +258,27 @@ static void lcd_status_screen()
 //	Main status display screen
 //####################################################################################################
 
-static void lcd_return_to_status()
-{
-    encoderPosition = 0;
-    currentMenu = lcd_status_screen;
-}
+static void lcd_return_to_status() { lcd_goto_menu(lcd_status_screen, 0, false); }
 
-static void lcd_sdcard_pause()
-{
-    card.pauseSDPrint();
-}
-static void lcd_sdcard_resume()
-{
-    card.startFileprint();
-}
+static void lcd_sdcard_pause() { card.pauseSDPrint(); }
+
+static void lcd_sdcard_resume() { card.startFileprint(); }
+
 static void lcd_sdcard_stop()
 {
     card.sdprinting = false;
-    card.closefile();
+    card.closefile();  
     quickStop();
     if(SD_FINISHED_STEPPERRELEASE)
     {
         enquecommand_P(PSTR(SD_FINISHED_RELEASECOMMAND));
+		
     }
     autotempShutdown();
+    cancel_heatup = true;
+    lcd_setstatus(MSG_PRINT_ABORTED);
+	
+	
 }
 
 /* Menu implementation */
@@ -493,7 +514,10 @@ static void lcd_prepare_menu()
 	MENU_ITEM_BACK(back, MSG_MAIN, lcd_main_menu);
 	MENU_ITEM(submenu, MSG_HEAT_COOL, lcd_heat_cool_menu);
 	MENU_ITEM(submenu, MSG_MOVE_AXIS, lcd_move_menu);
+	//MENU_ITEM_EDIT(int3, itostr2(&active_extruder), &target_temperature[0], 0, HEATER_0_MAXTEMP - 15);
 	MENU_ITEM(gcode, MSG_AUTO_HOME, PSTR("G28"));
+	MENU_ITEM(gcode, "Auto Level", PSTR("G29"));
+	//MENU_ITEM(gcode, "Auto level2", PSTR("G28 G29"));
 	MENU_ITEM(gcode, MSG_DISABLE_STEPPERS, PSTR("M84"));
 	//MENU_ITEM(gcode, MSG_SET_ORIGIN, PSTR("G92 X0 Y0 Z0"));
 	END_MENU();
@@ -521,6 +545,7 @@ static void lcd_tune_menu()
 #endif
     END_MENU();
 }
+
 
 //####################################################################################################
 //	Temperature control routines
@@ -577,8 +602,8 @@ static void lcd_heat_cool_menu()
     MENU_ITEM_EDIT(int3, MSG_FAN_SPEED, &fanSpeed, 0, 255);
 	END_MENU();
 }
-
-
+//
+//
 static void lcd_utilities_menu()
 {
 	START_MENU();
@@ -591,84 +616,35 @@ static void lcd_utilities_menu()
 }
 
 
+
 //####################################################################################################
 //	Manual movement routines
 //####################################################################################################
 float move_menu_scale;
 static void lcd_move_menu_axis();
 
-static void lcd_move_x()
-{
-    if (encoderPosition != 0)
-    {
-        current_position[X_AXIS] += float((int)encoderPosition) * move_menu_scale;
-        if (current_position[X_AXIS] < X_MIN_POS)
-            current_position[X_AXIS] = X_MIN_POS;
-        if (current_position[X_AXIS] > X_MAX_POS)
-            current_position[X_AXIS] = X_MAX_POS;
-        encoderPosition = 0;
-        plan_buffer_line(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS], 600, active_extruder);
-        lcdDrawUpdate = 1;
-    }
-    if (lcdDrawUpdate)
-    {
-        lcd_implementation_drawedit(PSTR("X"), ftostr31(current_position[X_AXIS]));
-    }
-    if (LCD_CLICKED)
-    {
-        lcd_quick_feedback();
-        currentMenu = lcd_move_menu_axis;
-        encoderPosition = 0;
-    }
+static void _lcd_move(const char *name, int axis, int min, int max) {
+  if (encoderPosition != 0) {
+    refresh_cmd_timeout();
+    current_position[axis] += float((int)encoderPosition) * move_menu_scale;
+    if (min_software_endstops && current_position[axis] < min) current_position[axis] = min;
+    if (max_software_endstops && current_position[axis] > max) current_position[axis] = max;
+    encoderPosition = 0;
+    #ifdef DELTA
+      calculate_delta(current_position);
+      plan_buffer_line(delta[X_AXIS], delta[Y_AXIS], delta[Z_AXIS], current_position[E_AXIS], 600, active_extruder);
+    #else
+      plan_buffer_line(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS], 600, active_extruder);
+    #endif
+    lcdDrawUpdate = 1;
+  }
+  if (lcdDrawUpdate) lcd_implementation_drawedit(name, ftostr31(current_position[axis]));
+  if (LCD_CLICKED) lcd_goto_menu(lcd_move_menu_axis);
 }
-static void lcd_move_y()
-{
-    if (encoderPosition != 0)
-    {
-        current_position[Y_AXIS] += float((int)encoderPosition) * move_menu_scale;
-        if (current_position[Y_AXIS] < Y_MIN_POS)
-            current_position[Y_AXIS] = Y_MIN_POS;
-        if (current_position[Y_AXIS] > Y_MAX_POS)
-            current_position[Y_AXIS] = Y_MAX_POS;
-        encoderPosition = 0;
-        plan_buffer_line(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS], 600, active_extruder);
-        lcdDrawUpdate = 1;
-    }
-    if (lcdDrawUpdate)
-    {
-        lcd_implementation_drawedit(PSTR("Y"), ftostr31(current_position[Y_AXIS]));
-    }
-    if (LCD_CLICKED)
-    {
-        lcd_quick_feedback();
-        currentMenu = lcd_move_menu_axis;
-        encoderPosition = 0;
-    }
-}
-static void lcd_move_z()
-{
-    if (encoderPosition != 0)
-    {
-        current_position[Z_AXIS] += float((int)encoderPosition) * move_menu_scale;
-        if (current_position[Z_AXIS] < Z_MIN_POS)
-            current_position[Z_AXIS] = Z_MIN_POS;
-        if (current_position[Z_AXIS] > Z_MAX_POS)
-            current_position[Z_AXIS] = Z_MAX_POS;
-        encoderPosition = 0;
-        plan_buffer_line(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS], 60, active_extruder);
-        lcdDrawUpdate = 1;
-    }
-    if (lcdDrawUpdate)
-    {
-        lcd_implementation_drawedit(PSTR("Z"), ftostr31(current_position[Z_AXIS]));
-    }
-    if (LCD_CLICKED)
-    {
-        lcd_quick_feedback();
-        currentMenu = lcd_move_menu_axis;
-        encoderPosition = 0;
-    }
-}
+static void lcd_move_x() { _lcd_move(PSTR("X"), X_AXIS, X_MIN_POS, X_MAX_POS); }
+static void lcd_move_y() { _lcd_move(PSTR("Y"), Y_AXIS, Y_MIN_POS, Y_MAX_POS); }
+static void lcd_move_z() { _lcd_move(PSTR("Z"), Z_AXIS, Z_MIN_POS, Z_MAX_POS); }
+
 static void lcd_move_e()
 {
     if (encoderPosition != 0)
@@ -684,12 +660,22 @@ static void lcd_move_e()
     }
     if (LCD_CLICKED)
     {
-        lcd_quick_feedback();
-        currentMenu = lcd_move_menu_axis;
-        encoderPosition = 0;
+		lcd_goto_menu(lcd_move_menu_axis);
+        //lcd_quick_feedback();
+        //currentMenu = lcd_move_menu_axis;
+        //encoderPosition = 0;
     }
 }
-
+static void lcd_move_e0()
+{
+	enquecommand_P(PSTR("T0"));
+	lcd_move_e();
+}
+static void lcd_move_e1()
+{
+	enquecommand_P(PSTR("T1"));
+	lcd_move_e();
+}
 static void lcd_move_menu_axis()
 {
     START_MENU();
@@ -699,7 +685,10 @@ static void lcd_move_menu_axis()
 //    if (move_menu_scale < 10.0)
 //    {
         MENU_ITEM(submenu, "Move Z", lcd_move_z);
-        MENU_ITEM(submenu, "Extruder", lcd_move_e);
+        MENU_ITEM(submenu, "Extruder0", lcd_move_e0);
+#  if EXTRUDERS > 1		
+		MENU_ITEM(submenu, "Extruder1", lcd_move_e1);
+#  endif
 //    }
     END_MENU();
 }
@@ -811,6 +800,9 @@ static void lcd_control_motion_menu()
 {
     START_MENU();
     MENU_ITEM_BACK(back, MSG_CONTROL, lcd_control_menu);
+#ifdef ENABLE_AUTO_BED_LEVELING
+    MENU_ITEM_EDIT(float32, MSG_ZPROBE_ZOFFSET, &zprobe_zoffset, 0.5, 50);
+#endif
     MENU_ITEM_EDIT(float5, MSG_ACC, &acceleration, 500, 99000);
     MENU_ITEM_EDIT(float3, MSG_VXY_JERK, &max_xy_jerk, 1, 990);
     MENU_ITEM_EDIT(float52, MSG_VZ_JERK, &max_z_jerk, 0.1, 990);
@@ -885,7 +877,11 @@ void lcd_sdcard_menu()
     {
         if (_menuItemNr == _lineNr)
         {
-            card.getfilename(i);
+			#ifndef SDCARD_RATHERRECENTFIRST
+              card.getfilename(i);
+            #else
+              card.getfilename(fileCnt-1-i);
+            #endif
             if (card.filenameIsDir)
             {
                 MENU_ITEM(sddirectory, MSG_CARD_MENU, card.filename, card.longFilename, _lineNr);
@@ -906,37 +902,21 @@ void lcd_sdcard_menu()
     void menu_edit_ ## _name () \
     { \
 		encoderCoarseEnabled = true; \
-        if ((int32_t)encoderPosition < minEditValue) \
-            encoderPosition = minEditValue; \
-        if ((int32_t)encoderPosition > maxEditValue) \
-            encoderPosition = maxEditValue; \
+		if ((int32_t)encoderPosition < minEditValue) encoderPosition = minEditValue; \
+        if ((int32_t)encoderPosition > maxEditValue) encoderPosition = maxEditValue; \
         if (lcdDrawUpdate) \
-            lcd_implementation_drawedit(editLabel, _strFunc(((_type)encoderPosition) / scale)); \
+            lcd_implementation_drawedit(editLabel, _strFunc(((_type)((int32_t)encoderPosition + minEditValue)) / scale)); \
         if (LCD_CLICKED) \
         { \
-            *((_type*)editValue) = ((_type)encoderPosition) / scale; \
-            lcd_quick_feedback(); \
-            currentMenu = prevMenu; \
-            encoderPosition = prevEncoderPosition; \
+            *((_type*)editValue) = ((_type)((int32_t)encoderPosition + minEditValue)) / scale; \
+            lcd_goto_menu(prevMenu, prevEncoderPosition); \
         } \
     } \
     void menu_edit_callback_ ## _name () \
     { \
 		encoderCoarseEnabled = true; \
-        if ((int32_t)encoderPosition < minEditValue) \
-            encoderPosition = minEditValue; \
-        if ((int32_t)encoderPosition > maxEditValue) \
-            encoderPosition = maxEditValue; \
-        if (lcdDrawUpdate) \
-            lcd_implementation_drawedit(editLabel, _strFunc(((_type)encoderPosition) / scale)); \
-        if (LCD_CLICKED) \
-        { \
-            *((_type*)editValue) = ((_type)encoderPosition) / scale; \
-            lcd_quick_feedback(); \
-            currentMenu = prevMenu; \
-            encoderPosition = prevEncoderPosition; \
-            (*callbackFunc)();\
-        } \
+		menu_edit_ ## _name (); \
+        if (LCD_CLICKED) (*callbackFunc)(); \
     } \
     static void menu_action_setting_edit_ ## _name (const char* pstr, _type* ptr, _type minValue, _type maxValue) \
     { \
@@ -950,8 +930,8 @@ void lcd_sdcard_menu()
         editLabel = pstr; \
         editValue = ptr; \
         minEditValue = minValue * scale; \
-        maxEditValue = maxValue * scale; \
-        encoderPosition = (*ptr) * scale; \
+        maxEditValue = maxValue * scale - minEditValue; \
+        encoderPosition = (*ptr) * scale - minEditValue; \
     }\
     static void menu_action_setting_edit_callback_ ## _name (const char* pstr, _type* ptr, _type minValue, _type maxValue, menuFunc_t callback) \
     { \
@@ -965,13 +945,15 @@ void lcd_sdcard_menu()
         editLabel = pstr; \
         editValue = ptr; \
         minEditValue = minValue * scale; \
-        maxEditValue = maxValue * scale; \
-        encoderPosition = (*ptr) * scale; \
+        maxEditValue = maxValue * scale - minEditValue; \
+        encoderPosition = (*ptr) * scale - minEditValue; \
         callbackFunc = callback;\
     }
 menu_edit_type(int, int3, itostr3, 1)
+menu_edit_type(int, uint8_t, itostr2, 1)
 menu_edit_type(float, float3, ftostr3, 1)
 menu_edit_type(float, float32, ftostr32, 100)
+menu_edit_type(float, float43, ftostr43, 1000)
 menu_edit_type(float, float5, ftostr5, 0.01)
 menu_edit_type(float, float51, ftostr51, 10)
 menu_edit_type(float, float52, ftostr52, 100)
@@ -988,24 +970,11 @@ static void lcd_quick_feedback()
 }
 
 /** Menu action functions **/
-static void menu_action_back(menuFunc_t data)
-{
-    currentMenu = data;
-    encoderPosition = 0;
-}
-static void menu_action_submenu(menuFunc_t data)
-{
-    currentMenu = data;
-    encoderPosition = 0;
-}
-static void menu_action_gcode(const char* pgcode)
-{
-    enquecommand_P(pgcode);
-}
-static void menu_action_function(menuFunc_t data)
-{
-    (*data)();
-}
+static void menu_action_back(menuFunc_t data) { lcd_goto_menu(data); }
+static void menu_action_submenu(menuFunc_t data) { lcd_goto_menu(data); }
+static void menu_action_gcode(const char* pgcode) { enquecommand_P(pgcode); }
+static void menu_action_function(menuFunc_t data) { (*data)(); }
+
 static void menu_action_sdfile(const char* filename, char* longFilename, uint8_t item)
 {
     char cmd[30];
@@ -1026,7 +995,11 @@ static void menu_action_setting_edit_bool(const char* pstr, bool* ptr)
 {
     *ptr = !(*ptr);
 }
-
+static void menu_action_setting_edit_callback_bool(const char* pstr, bool* ptr, menuFunc_t callback)
+{
+	menu_action_setting_edit_bool(pstr, ptr);
+	(*callback)();
+}
 /** LCD API **/
 void lcd_init()
 {
@@ -1040,6 +1013,7 @@ void lcd_init()
     pinMode(BTN_LFT,INPUT);
     pinMode(BTN_RT,INPUT);
  //   pinMode(BTN_ENT,INPUT)
+
 
 #if (SDCARDDETECT > 0)
     pinMode(SDCARDDETECT,INPUT);
@@ -1100,6 +1074,7 @@ void lcd_update()
         if (LCD_CLICKED)
             timeoutToStatus = millis() + LCD_TIMEOUT_TO_STATUS;
 
+
 		encoderCoarseEnabled = false;	//	Clear encoder coarse enable to allow a menu to set it
 		invertEncoderDir = false;		//	Clear encoder inversion to allow a menu to set it
         (*currentMenu)();
@@ -1132,20 +1107,41 @@ void lcd_ignore_click(bool b)
     ignore_click = b;
     wait_for_unclick = false;
 }
+void lcd_finishstatus() {
+  int len = strlen(lcd_status_message);
+  if (len > 0) {
+    while (len < LCD_WIDTH) {
+      lcd_status_message[len++] = ' ';
+    }
+  }
+  lcd_status_message[LCD_WIDTH] = '\0';
+  #if defined(LCD_PROGRESS_BAR) && defined(SDSUPPORT)
+    #if PROGRESS_MSG_EXPIRE > 0
+      messageTick =
+    #endif
+    progressBarTick = millis();
+  #endif
+  lcdDrawUpdate = 2;
 
+  #ifdef FILAMENT_LCD_DISPLAY
+    message_millis = millis();  //get status message to show up for a while
+  #endif
+}
 void lcd_setstatus(const char* message)
 {
     if (lcd_status_message_level > 0)
         return;
     strncpy(lcd_status_message, message, LCD_WIDTH);
-    lcdDrawUpdate = 2;
+	lcd_finishstatus();
+    //lcdDrawUpdate = 2;
 }
 void lcd_setstatuspgm(const char* message)
 {
     if (lcd_status_message_level > 0)
         return;
     strncpy_P(lcd_status_message, message, LCD_WIDTH);
-    lcdDrawUpdate = 2;
+	lcd_finishstatus();
+    //lcdDrawUpdate = 2;
 }
 void lcd_setalertstatuspgm(const char* message)
 {
@@ -1157,6 +1153,7 @@ void lcd_reset_alert_level()
 {
     lcd_status_message_level = 0;
 }
+
 
 /* Warning: This function is called from interrupt context */
 void lcd_buttons_update()
@@ -1236,6 +1233,16 @@ char *itostr2(const uint8_t &x)
   return conv;
 }
 
+char *itostr1(const uint8_t &x)
+{
+  //sprintf(conv,"%5.1f",x);
+  int xx=x;
+  //conv[0]=(xx/10)%10+'0';
+  conv[0]=(xx)%10+'0';
+  conv[1]=0;
+  return conv;
+}
+
 //  convert float to string with +123.4 format
 char *ftostr31(const float &x)
 {
@@ -1283,6 +1290,82 @@ char *ftostr32(const float &x)
   return conv;
 }
 
+// Convert float to string with 1.234 format
+char *ftostr43(const float &x)
+{
+	long xx = x * 1000;
+    if (xx >= 0)
+		conv[0] = (xx / 1000) % 10 + '0';
+	else
+		conv[0] = '-';
+	xx = abs(xx);
+	conv[1] = '.';
+	conv[2] = (xx / 100) % 10 + '0';
+	conv[3] = (xx / 10) % 10 + '0';
+	conv[4] = (xx) % 10 + '0';
+	conv[5] = 0;
+	return conv;
+}
+
+//Float to string with 1.23 format
+char *ftostr12ns(const float &x)
+{
+  long xx=x*100;
+  
+  xx=abs(xx);
+  conv[0]=(xx/100)%10+'0';
+  conv[1]='.';
+  conv[2]=(xx/10)%10+'0';
+  conv[3]=(xx)%10+'0';
+  conv[4]=0;
+  return conv;
+}
+
+//  convert float to space-padded string with -_23.4_ format
+char *ftostr32sp(const float &x) {
+  long xx = abs(x * 100);
+  uint8_t dig;
+
+  if (x < 0) { // negative val = -_0
+    conv[0] = '-';
+    dig = (xx / 1000) % 10;
+    conv[1] = dig ? '0' + dig : ' ';
+  }
+  else { // positive val = __0
+    dig = (xx / 10000) % 10;
+    if (dig) {
+      conv[0] = '0' + dig;
+      conv[1] = '0' + (xx / 1000) % 10;
+    }
+    else {
+      conv[0] = ' ';
+      dig = (xx / 1000) % 10;
+      conv[1] = dig ? '0' + dig : ' ';
+    }
+  }
+
+  conv[2] = '0' + (xx / 100) % 10; // lsd always
+
+  dig = xx % 10;
+  if (dig) { // 2 decimal places
+    conv[5] = '0' + dig;
+    conv[4] = '0' + (xx / 10) % 10;
+    conv[3] = '.';
+  }
+  else { // 1 or 0 decimal place
+    dig = (xx / 10) % 10;
+    if (dig) {
+      conv[4] = '0' + dig;
+      conv[3] = '.';
+    }
+    else {
+      conv[3] = conv[4] = ' ';
+    }
+    conv[5] = ' ';
+  }
+  conv[6] = '\0';
+  return conv;
+}
 char *itostr31(const int &xx)
 {
   conv[0]=(xx>=0)?'+':'-';
@@ -1295,9 +1378,13 @@ char *itostr31(const int &xx)
   return conv;
 }
 
-char *itostr3(const int &xx)
+char *itostr3(const int &x)
 {
-  if (xx >= 100)
+ int xx = x;
+  if (xx < 0) {
+     conv[0]='-';
+     xx = -xx;
+  } else if (xx >= 100)
     conv[0]=(xx/100)%10+'0';
   else
     conv[0]=' ';
@@ -1333,45 +1420,23 @@ char *itostr3left(const int &xx)
   return conv;
 }
 
-char *itostr4(const int &xx)
-{
-  if (xx >= 1000)
-    conv[0]=(xx/1000)%10+'0';
-  else
-    conv[0]=' ';
-  if (xx >= 100)
-    conv[1]=(xx/100)%10+'0';
-  else
-    conv[1]=' ';
-  if (xx >= 10)
-    conv[2]=(xx/10)%10+'0';
-  else
-    conv[2]=' ';
-  conv[3]=(xx)%10+'0';
-  conv[4]=0;
+char *itostr4(const int &xx) {
+  conv[0] = xx >= 1000 ? (xx / 1000) % 10 + '0' : ' ';
+  conv[1] = xx >= 100 ? (xx / 100) % 10 + '0' : ' ';
+  conv[2] = xx >= 10 ? (xx / 10) % 10 + '0' : ' ';
+  conv[3] = xx % 10 + '0';
+  conv[4] = 0;
   return conv;
 }
 
 //  convert float to string with 12345 format
 char *ftostr5(const float &x)
 {
-  long xx=abs(x);
-  if (xx >= 10000)
-    conv[0]=(xx/10000)%10+'0';
-  else
-    conv[0]=' ';
-  if (xx >= 1000)
-    conv[1]=(xx/1000)%10+'0';
-  else
-    conv[1]=' ';
-  if (xx >= 100)
-    conv[2]=(xx/100)%10+'0';
-  else
-    conv[2]=' ';
-  if (xx >= 10)
-    conv[3]=(xx/10)%10+'0';
-  else
-    conv[3]=' ';
+  long xx = abs(x);
+  conv[0] = xx >= 10000 ? (xx / 10000) % 10 + '0' : ' ';
+  conv[1] = xx >= 1000 ? (xx / 1000) % 10 + '0' : ' ';
+  conv[2] = xx >= 100 ? (xx / 100) % 10 + '0' : ' ';
+  conv[3] = xx >= 10 ? (xx / 10) % 10 + '0' : ' ';
   conv[4]=(xx)%10+'0';
   conv[5]=0;
   return conv;
@@ -1426,3 +1491,4 @@ void copy_and_scalePID_d()
 }
 
 #endif //RIGIDPANEL
+

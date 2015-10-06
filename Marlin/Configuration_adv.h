@@ -86,7 +86,7 @@
 //=============================Mechanical Settings===========================
 //===========================================================================
 
-//#define ENDSTOPS_ONLY_FOR_HOMING
+#define ENDSTOPS_ONLY_FOR_HOMING
 
 
 //// AUTOSET LOCATIONS OF LIMIT SWITCHES
@@ -438,8 +438,8 @@ const unsigned int dropsegments=5; //everything with less than this number of st
 #ifdef ULTIPANEL
   #define FILAMENTCHANGEENABLE
   #ifdef FILAMENTCHANGEENABLE
-    #define FILAMENTCHANGE_XPOS 3
-    #define FILAMENTCHANGE_YPOS 3
+    #define FILAMENTCHANGE_XPOS 70
+    #define FILAMENTCHANGE_YPOS 70
     #define FILAMENTCHANGE_ZADD 10
     #define FILAMENTCHANGE_FIRSTRETRACT -2
     #define FILAMENTCHANGE_FINALRETRACT -100
@@ -518,3 +518,4 @@ const unsigned int dropsegments=5; //everything with less than this number of st
 
 
 #endif //__CONFIGURATION_ADV_H
+

@@ -36,6 +36,8 @@ extern int absPreheatHotendTemp;
 extern int absPreheatHPBTemp;
 extern int absPreheatFanSpeed;
   
+extern bool cancel_heatup;
+  
 void lcd_buzz(long duration,uint16_t freq);
 bool lcd_clicked();
 void lcd_ignore_click(bool b=true);
@@ -55,6 +57,7 @@ void lcd_ignore_click(bool b=true);
 
 #endif //RIGIDPANEL
 
+char *itostr1(const uint8_t &x);
 char *itostr2(const uint8_t &x);
 char *itostr31(const int &xx);
 char *itostr3(const int &xx);
@@ -73,3 +76,4 @@ char *ftostr51(const float &x);
 char *ftostr52(const float &x);
 
 #endif //RIGIDPANEL_H
+

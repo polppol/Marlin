@@ -147,19 +147,28 @@ void CardReader::initsd()
   cardOK = false;
   if(root.isOpen())
     root.close();
-#ifdef SDSLOW
-  if (!card.init(SPI_HALF_SPEED,SDSS)
-  #if defined(LCD_SDSS) && (LCD_SDSS != SDSS)
-    && !card.init(SPI_HALF_SPEED,LCD_SDSS)
-  #endif
-    )
+#ifdef SDSPEED
+  if (!card.init(SDSPEED,SDSS))
+#elif defined(SDEXTRASLOW)
+  if (!card.init(SPI_SIXTEENTH_SPEED,SDSS))
+#elif defined(SDSLOW)
+  if (!card.init(SPI_HALF_SPEED,SDSS))
 #else
-  if (!card.init(SPI_FULL_SPEED,SDSS)
-  #if defined(LCD_SDSS) && (LCD_SDSS != SDSS)
-    && !card.init(SPI_FULL_SPEED,LCD_SDSS)
-  #endif
-    )
+  if (!card.init(SPI_FULL_SPEED,SDSS))
 #endif
+// #ifdef SDSLOW
+//   if (!card.init(SPI_HALF_SPEED,SDSS)
+//   #if defined(LCD_SDSS) && (LCD_SDSS != SDSS)
+//     && !card.init(SPI_HALF_SPEED,LCD_SDSS)
+//   #endif
+//     )
+// #else
+//   if (!card.init(SPI_FULL_SPEED,SDSS)
+//   #if defined(LCD_SDSS) && (LCD_SDSS != SDSS)
+//     && !card.init(SPI_FULL_SPEED,LCD_SDSS)
+//   #endif
+//     )
+// #endif
   {
     //if (!card.init(SPI_HALF_SPEED,SDSS))
     SERIAL_ECHO_START;
@@ -643,3 +652,4 @@ void CardReader::printingHasFinished()
     }
 }
 #endif //SDSUPPORT
+

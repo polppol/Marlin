@@ -95,7 +95,7 @@
 // #define MACHINE_UUID "00000000-0000-0000-0000-000000000000"
 
 // This defines the number of extruders
-#define EXTRUDERS 2
+#define EXTRUDERS 1
 
 //// The following define selects which power supply you have. Please choose the one that matches your setup
 // 1 = ATX
@@ -129,7 +129,7 @@
 // 10 is 100k RS thermistor 198-961 (4.7k pullup)
 // 11 is 100k beta 3950 1% thermistor (4.7k pullup)
 // 12 is 100k 0603 SMD Vishay NTCS0603E3104FXT (4.7k pullup) (calibrated for Makibox hot bed)
-// 13 is 100k Hisens 3950  1% up to 300ยฐC for hotend "Simple ONE " & "Hotend "All In ONE" 
+// 13 is 100k Hisens 3950  1% up to 300°C for hotend "Simple ONE " & "Hotend "All In ONE" 
 // 20 is the PT100 circuit found in the Ultimainboard V2.x
 // 60 is 100k Maker's Tool Works Kapton Bed Thermistor beta=3950
 //
@@ -144,8 +144,8 @@
 // 147 is Pt100 with 4k7 pullup
 // 110 is Pt100 with 1k pullup (non standard)
 
-#define TEMP_SENSOR_0 5
-#define TEMP_SENSOR_1 5
+#define TEMP_SENSOR_0 1
+#define TEMP_SENSOR_1 1
 #define TEMP_SENSOR_2 0
 #define TEMP_SENSOR_BED 1
 
@@ -205,9 +205,9 @@
 //  #define  DEFAULT_Kd 114
 
 // RigidBot
-#define DEFAULT_Kp 48.66
-#define DEFAULT_Ki 6.69
-#define DEFAULT_Kd 88.49
+#define DEFAULT_Kp 14.36
+#define DEFAULT_Ki 0.66
+#define DEFAULT_Kd 79.25
 
 // MakerGear
 //    #define  DEFAULT_Kp 7.0
@@ -302,15 +302,15 @@ your extruder heater takes 2 minutes to hit the target on heating.
 // uncomment the 2 defines below:
 
 // Parameters for all extruder heaters
-#define THERMAL_RUNAWAY_PROTECTION_PERIOD 40
-#define THERMAL_RUNAWAY_PROTECTION_HYSTERESIS 7
+#define THERMAL_RUNAWAY_PROTECTION_PERIOD 40 //in seconds
+#define THERMAL_RUNAWAY_PROTECTION_HYSTERESIS 4 // in degree Celsius
 
 // If you want to enable this feature for your bed heater,
 // uncomment the 2 defines below:
 
 // Parameters for the bed heater
-#define THERMAL_RUNAWAY_PROTECTION_BED_PERIOD 20
-#define THERMAL_RUNAWAY_PROTECTION_BED_HYSTERESIS 13
+#define THERMAL_RUNAWAY_PROTECTION_BED_PERIOD 20 //in seconds
+#define THERMAL_RUNAWAY_PROTECTION_BED_HYSTERESIS 2 // in degree Celsius
 //===========================================================================
 
 
@@ -325,7 +325,7 @@ your extruder heater takes 2 minutes to hit the target on heating.
 //
 // Invent-A-Part RigidBot
 #define RIGIDBOT
-#define RIGIDBOT_SIZE 2
+#define RIGIDBOT_SIZE 1
 // Other predefined mechanical settings go here...
 
 #ifdef RIGIDBOT
@@ -370,15 +370,14 @@ your extruder heater takes 2 minutes to hit the target on heating.
      #define X_DUAL_REDUCTION 350 // Prevent head crashes if EXTRUDERS > 2
    #endif
 
-	 
    #if RIGIDBOT_SIZE == 1 // 10x10 Regular
      #define X_MAX_POS (254 - X_DUAL_REDUCTION)
      #define Y_MAX_POS 248
      #define Z_MAX_POS 254
    #elif RIGIDBOT_SIZE == 2 // 12x16 Big
-#define X_MAX_POS 345
-#define Y_MAX_POS 295
-#define Z_MAX_POS 240
+     #define X_MAX_POS (406 - X_DUAL_REDUCTION)
+     #define Y_MAX_POS 304
+     #define Z_MAX_POS 254
    #endif
    #define X_MIN_POS 0
    #define Y_MIN_POS 0
@@ -387,7 +386,7 @@ your extruder heater takes 2 minutes to hit the target on heating.
    #define NUM_AXIS 4
    #define HOMING_FEEDRATE {50*60, 50*60, 15*60, 0}
 
-#define DEFAULT_AXIS_STEPS_PER_UNIT {80, 40, 1600, 76}
+   #define DEFAULT_AXIS_STEPS_PER_UNIT   {44.3090,22.1545,1600,53.5}  // default steps per unit for Ultimaker
    #define DEFAULT_MAX_FEEDRATE          {500, 500, 4, 25}    // (mm/sec)
    #define DEFAULT_MAX_ACCELERATION      {800,600,100,10000}    // X, Y, Z, E maximum start speed for accelerated moves. E default values are good for Skeinforge 40+, for older versions raise them a lot.
 
@@ -411,7 +410,7 @@ your extruder heater takes 2 minutes to hit the target on heating.
      // #define ENDSTOPPULLUP_ZMAX
      // #define ENDSTOPPULLUP_XMIN
      // #define ENDSTOPPULLUP_YMIN
-//#define ENDSTOPPULLUP_ZMIN
+     // #define ENDSTOPPULLUP_ZMIN
    #endif
    
    #ifdef ENDSTOPPULLUPS
@@ -420,7 +419,7 @@ your extruder heater takes 2 minutes to hit the target on heating.
      #define ENDSTOPPULLUP_ZMAX
      #define ENDSTOPPULLUP_XMIN
      #define ENDSTOPPULLUP_YMIN
-//#define ENDSTOPPULLUP_ZMIN
+     #define ENDSTOPPULLUP_ZMIN
    #endif
    
    // The pullups are needed if you directly connect a mechanical endswitch between the signal and ground pins.
@@ -468,11 +467,11 @@ your extruder heater takes 2 minutes to hit the target on heating.
    #define max_software_endstops true  // If true, axis won't move to coordinates greater than the defined lengths below.
    
    // Travel limits after homing
-#define X_MAX_POS 345
+   #define X_MAX_POS 205
    #define X_MIN_POS 0
-#define Y_MAX_POS 295
+   #define Y_MAX_POS 205
    #define Y_MIN_POS 0
-#define Z_MAX_POS 240
+   #define Z_MAX_POS 200
    #define Z_MIN_POS 0
    
    //// MOVEMENT SETTINGS
@@ -481,7 +480,7 @@ your extruder heater takes 2 minutes to hit the target on heating.
    
    // default settings
 
-#define DEFAULT_AXIS_STEPS_PER_UNIT {80, 40, 1600, 76}
+   #define DEFAULT_AXIS_STEPS_PER_UNIT   {78.7402,78.7402,200.0*8/3,760*1.1}  // default steps per unit for Ultimaker
    #define DEFAULT_MAX_FEEDRATE          {500, 500, 5, 25}    // (mm/sec)
    #define DEFAULT_MAX_ACCELERATION      {9000,9000,100,10000}    // X, Y, Z, E maximum start speed for accelerated moves. E default values are good for Skeinforge 40+, for older versions raise them a lot.
    
@@ -491,8 +490,8 @@ your extruder heater takes 2 minutes to hit the target on heating.
    // Offset of the extruders (uncomment if using more than one and relying on firmware to position when changing).
    // The offset has to be X=0, Y=0 for the extruder 0 hotend (default extruder).
    // For the other hotends it is their distance from the extruder 0 hotend.
-#define EXTRUDER_OFFSET_X {0.0, 34.71} // (in mm) for each extruder, offset of the hotend on the X axis
-#define EXTRUDER_OFFSET_Y {0.0, 0.53}  // (in mm) for each extruder, offset of the hotend on the Y axis
+   // #define EXTRUDER_OFFSET_X {0.0, 20.00} // (in mm) for each extruder, offset of the hotend on the X axis
+   // #define EXTRUDER_OFFSET_Y {0.0, 5.00}  // (in mm) for each extruder, offset of the hotend on the Y axis
    
    // The speed change that does not require acceleration (i.e. the software might assume it can be done instantaneously)
    #define DEFAULT_XYJERK                20.0    // (mm/sec)
@@ -510,7 +509,7 @@ your extruder heater takes 2 minutes to hit the target on heating.
 
 //============================= Bed Auto Leveling ===========================
 
-#define ENABLE_AUTO_BED_LEVELING
+#define ENABLE_AUTO_BED_LEVELING // Delete the comment to enable (remove // at the start of the line)
 #define Z_PROBE_REPEATABILITY_TEST  // If not commented out, Z-Probe Repeatability test will be included if Auto Bed Leveling is Enabled.
 
 #ifdef ENABLE_AUTO_BED_LEVELING
@@ -535,14 +534,14 @@ your extruder heater takes 2 minutes to hit the target on heating.
   #ifdef AUTO_BED_LEVELING_GRID
 
     // set the rectangle in which to probe
-#define LEFT_PROBE_BED_POSITION 50
-#define RIGHT_PROBE_BED_POSITION 345
-#define BACK_PROBE_BED_POSITION 250
-#define FRONT_PROBE_BED_POSITION 55
+    #define LEFT_PROBE_BED_POSITION 15
+    #define RIGHT_PROBE_BED_POSITION 170
+    #define BACK_PROBE_BED_POSITION 180
+    #define FRONT_PROBE_BED_POSITION 20
 
      // set the number of grid points per dimension
      // I wouldn't see a reason to go above 3 (=9 probing points on the bed)
-#define AUTO_BED_LEVELING_GRID_POINTS 3
+    #define AUTO_BED_LEVELING_GRID_POINTS 2
 
 
   #else  // not AUTO_BED_LEVELING_GRID
@@ -561,17 +560,17 @@ your extruder heater takes 2 minutes to hit the target on heating.
 
   // these are the offsets to the probe relative to the extruder tip (Hotend - Probe)
   // X and Y offsets must be integers
-#define X_PROBE_OFFSET_FROM_EXTRUDER 47
-#define Y_PROBE_OFFSET_FROM_EXTRUDER 53
-#define Z_PROBE_OFFSET_FROM_EXTRUDER -0.95
+  #define X_PROBE_OFFSET_FROM_EXTRUDER -25
+  #define Y_PROBE_OFFSET_FROM_EXTRUDER -29
+  #define Z_PROBE_OFFSET_FROM_EXTRUDER -12.35
 
-#define Z_RAISE_BEFORE_HOMING 3
+  #define Z_RAISE_BEFORE_HOMING 4       // (in mm) Raise Z before homing (G28) for Probe Clearance.
                                         // Be sure you have this distance over your Z_MAX_POS in case
 
-  #define XY_TRAVEL_SPEED 5000         // X and Y axis travel speed between probes, in mm/min
+  #define XY_TRAVEL_SPEED 8000         // X and Y axis travel speed between probes, in mm/min
 
-#define Z_RAISE_BEFORE_PROBING 8
-#define Z_RAISE_BETWEEN_PROBINGS 4
+  #define Z_RAISE_BEFORE_PROBING 15    //How much the extruder will be raised before traveling to the first probing point.
+  #define Z_RAISE_BETWEEN_PROBINGS 5  //How much the extruder will be raised when traveling from between next probing points
 
   //#define Z_PROBE_SLED // turn on if you have a z-probe mounted on a sled like those designed by Charles Bell
   //#define SLED_DOCKING_OFFSET 5 // the extra distance the X axis must travel to pickup the sled. 0 should be fine but you can push it further if you'd like.
@@ -665,13 +664,13 @@ your extruder heater takes 2 minutes to hit the target on heating.
 #define EEPROM_CHITCHAT
 
 // Preheat Constants
-#define PLA_PREHEAT_HOTEND_TEMP 195
-#define PLA_PREHEAT_HPB_TEMP 60
-#define PLA_PREHEAT_FAN_SPEED 0
+#define PLA_PREHEAT_HOTEND_TEMP 200
+#define PLA_PREHEAT_HPB_TEMP 70
+#define PLA_PREHEAT_FAN_SPEED 255   // Insert Value between 0 and 255
 
-#define ABS_PREHEAT_HOTEND_TEMP 225
-#define ABS_PREHEAT_HPB_TEMP 85
-#define ABS_PREHEAT_FAN_SPEED 0
+#define ABS_PREHEAT_HOTEND_TEMP 230
+#define ABS_PREHEAT_HPB_TEMP 100
+#define ABS_PREHEAT_FAN_SPEED 255   // Insert Value between 0 and 255
 
 //LCD and SD support
 //#define ULTRA_LCD  //general LCD support, also 16x2
@@ -890,7 +889,7 @@ your extruder heater takes 2 minutes to hit the target on heating.
 
 //define BlinkM/CyzRgb Support
 //#define BLINKM
-//USE M150 Rx Uy Bz
+
 /*********************************************************************\
 * R/C SERVO support
 * Sponsored by TrinityLabs, Reworked by codexmas
@@ -950,4 +949,3 @@ your extruder heater takes 2 minutes to hit the target on heating.
 #include "thermistortables.h"
 
 #endif //__CONFIGURATION_H
-

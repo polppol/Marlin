@@ -118,6 +118,9 @@ extern volatile uint8_t buttons;  //the last checked buttons in a bit array.
 #define LCD_STR_CLOCK       "\x07"
 #define LCD_STR_ARROW_RIGHT "\x7E"  /* from the default character set */
 
+//#define LCD_STR_ACT_EX       "\x10"
+
+
 static void lcd_implementation_init()
 {
     byte bedTemp[8] =
@@ -203,6 +206,16 @@ static void lcd_implementation_init()
         B00000,
         B00000
     }; //thanks Sonny Mounicou
+	byte actex [8]={
+        B11100,
+        B10000,
+        B11100,
+        B10000,
+        B11101,
+        B00010,
+        B00101,
+        B00000
+    }; //thanks 000
 
 #if defined(LCDI2C_TYPE_PCF8575)
     lcd.begin(LCD_WIDTH, LCD_HEIGHT);
@@ -232,6 +245,10 @@ static void lcd_implementation_init()
     lcd.createChar(LCD_STR_FOLDER[0], folder);
     lcd.createChar(LCD_STR_FEEDRATE[0], feedrate);
     lcd.createChar(LCD_STR_CLOCK[0], clock);
+	
+	//lcd.createChar(LCD_STR_ACT_EX[0], actex);
+	
+	
     lcd.clear();
 }
 
@@ -275,7 +292,7 @@ Possible status screens:
        |T000/000D B000/000D |
        |T000/000D     Z000.0|
        |F100%  SD100% T--:--|
-       |Status line.........|
+       |Status line.......X1|
 */
 static void lcd_implementation_status_screen()
 {
@@ -285,7 +302,8 @@ static void lcd_implementation_status_screen()
 
     lcd.setCursor(0, 0);
     lcd.print(LCD_STR_THERMOMETER[0]);
-    lcd.print(itostr3(tHotend));
+   // lcd.print(itostr2(active_extruder));
+	lcd.print(itostr3(tHotend));
     lcd.print('/');
     lcd.print(itostr3left(tTarget));
     lcd_printPGM(PSTR(LCD_STR_DEGREE " "));
@@ -370,6 +388,10 @@ static void lcd_implementation_status_screen()
     //Status message line on the last line
     lcd.setCursor(0, LCD_HEIGHT - 1);
     lcd.print(lcd_status_message);
+	//Current Ex
+    lcd.setCursor(19, LCD_HEIGHT - 1);
+	//lcd.print(LCD_STR_ACT_EX[0]);
+	lcd.print(itostr1(active_extruder));
 }
 static void lcd_implementation_drawmenu_generic(uint8_t row, const char* pstr, char pre_char, char post_char)
 {
@@ -439,6 +461,8 @@ static void lcd_implementation_drawmenu_setting_edit_generic_P(uint8_t row, cons
 }
 #define lcd_implementation_drawmenu_setting_edit_int3_selected(row, pstr, pstr2, data, minValue, maxValue) lcd_implementation_drawmenu_setting_edit_generic(row, pstr, '>', itostr3(*(data)))
 #define lcd_implementation_drawmenu_setting_edit_int3(row, pstr, pstr2, data, minValue, maxValue) lcd_implementation_drawmenu_setting_edit_generic(row, pstr, ' ', itostr3(*(data)))
+#define lcd_implementation_drawmenu_setting_edit_uint8_t_selected(row, pstr, pstr2, data, minValue, maxValue) lcd_implementation_drawmenu_setting_edit_generic(row, pstr, '>', itostr2(*(data)))
+#define lcd_implementation_drawmenu_setting_edit_uint8_t(row, pstr, pstr2, data, minValue, maxValue) lcd_implementation_drawmenu_setting_edit_generic(row, pstr, ' ', itostr2(*(data)))
 #define lcd_implementation_drawmenu_setting_edit_float3_selected(row, pstr, pstr2, data, minValue, maxValue) lcd_implementation_drawmenu_setting_edit_generic(row, pstr, '>', ftostr3(*(data)))
 #define lcd_implementation_drawmenu_setting_edit_float3(row, pstr, pstr2, data, minValue, maxValue) lcd_implementation_drawmenu_setting_edit_generic(row, pstr, ' ', ftostr3(*(data)))
 #define lcd_implementation_drawmenu_setting_edit_float32_selected(row, pstr, pstr2, data, minValue, maxValue) lcd_implementation_drawmenu_setting_edit_generic(row, pstr, '>', ftostr32(*(data)))
@@ -457,6 +481,8 @@ static void lcd_implementation_drawmenu_setting_edit_generic_P(uint8_t row, cons
 //Add version for callback functions
 #define lcd_implementation_drawmenu_setting_edit_callback_int3_selected(row, pstr, pstr2, data, minValue, maxValue, callback) lcd_implementation_drawmenu_setting_edit_generic(row, pstr, '>', itostr3(*(data)))
 #define lcd_implementation_drawmenu_setting_edit_callback_int3(row, pstr, pstr2, data, minValue, maxValue, callback) lcd_implementation_drawmenu_setting_edit_generic(row, pstr, ' ', itostr3(*(data)))
+#define lcd_implementation_drawmenu_setting_edit_callback_uint8_t_selected(row, pstr, pstr2, data, minValue, maxValue, callback) lcd_implementation_drawmenu_setting_edit_generic(row, pstr, '>', itostr2(*(data)))
+#define lcd_implementation_drawmenu_setting_edit_callback_uint8_t(row, pstr, pstr2, data, minValue, maxValue, callback) lcd_implementation_drawmenu_setting_edit_generic(row, pstr, ' ', itostr2(*(data)))
 #define lcd_implementation_drawmenu_setting_edit_callback_float3_selected(row, pstr, pstr2, data, minValue, maxValue, callback) lcd_implementation_drawmenu_setting_edit_generic(row, pstr, '>', ftostr3(*(data)))
 #define lcd_implementation_drawmenu_setting_edit_callback_float3(row, pstr, pstr2, data, minValue, maxValue, callback) lcd_implementation_drawmenu_setting_edit_generic(row, pstr, ' ', ftostr3(*(data)))
 #define lcd_implementation_drawmenu_setting_edit_callback_float32_selected(row, pstr, pstr2, data, minValue, maxValue, callback) lcd_implementation_drawmenu_setting_edit_generic(row, pstr, '>', ftostr32(*(data)))
@@ -625,3 +651,4 @@ static uint8_t lcd_implementation_read_slow_buttons()
 #endif
 
 #endif //ULTRALCD_IMPLEMENTATION_RIGIDPANEL_H
+
